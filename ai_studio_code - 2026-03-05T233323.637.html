@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FB Video Downloader</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: white; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div class="max-w-xl w-full">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-blue-500 mb-2">FB Downloader</h1>
+            <p class="text-slate-400">Paste your Facebook video/reel link below</p>
+        </div>
+
+        <!-- Input Box -->
+        <div class="glass p-6 rounded-2xl shadow-2xl">
+            <div class="flex flex-col gap-4">
+                <input 
+                    type="text" 
+                    id="fbUrl" 
+                    placeholder="https://www.facebook.com/share/r/..." 
+                    class="w-full p-4 rounded-xl bg-slate-900 border border-slate-700 focus:border-blue-500 focus:outline-none transition-all"
+                >
+                <button 
+                    onclick="downloadVideo()" 
+                    id="dlBtn"
+                    class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2"
+                >
+                    <span>Fetch Video</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading Spinner (Hidden) -->
+        <div id="loading" class="hidden mt-8 text-center">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
+            <p class="mt-2 text-slate-400">Processing video links...</p>
+        </div>
+
+        <!-- Result Card (Hidden) -->
+        <div id="result" class="hidden mt-8 glass p-6 rounded-2xl animate-fade-in">
+            <img id="thumb" src="" alt="Thumbnail" class="w-full h-48 object-cover rounded-xl mb-4 border border-slate-700">
+            <h2 id="title" class="font-bold text-lg mb-2 line-clamp-2"></h2>
+            <p id="duration" class="text-sm text-blue-400 mb-4 font-semibold"></p>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <a id="sdLink" href="#" target="_blank" class="bg-slate-700 hover:bg-slate-600 text-center py-3 rounded-lg font-medium transition-all">Download SD</a>
+                <a id="hdLink" href="#" target="_blank" class="bg-blue-600 hover:bg-blue-500 text-center py-3 rounded-lg font-medium transition-all text-white">Download HD</a>
+            </div>
+        </div>
+
+        <!-- Error Msg -->
+        <p id="error" class="hidden mt-4 text-red-400 text-center text-sm"></p>
+    </div>
+
+    <script>
+        async function downloadVideo() {
+            const urlInput = document.getElementById('fbUrl').value;
+            const btn = document.getElementById('dlBtn');
+            const resultDiv = document.getElementById('result');
+            const loading = document.getElementById('loading');
+            const errorMsg = document.getElementById('error');
+
+            if (!urlInput) {
+                alert("Please paste a URL first!");
+                return;
+            }
+
+            // UI State: Loading
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            loading.classList.remove('hidden');
+            resultDiv.classList.add('hidden');
+            errorMsg.classList.add('hidden');
+
+            try {
+                // API URL construction
+                const apiUrl = `https://betadash-api-swordslush-production.up.railway.app/fbdownv2?url=${encodeURIComponent(urlInput)}`;
+                
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+
+                if (data && data.results) {
+                    const res = data.results;
+                    
+                    // Populate UI
+                    document.getElementById('thumb').src = res.thumbnail;
+                    document.getElementById('title').innerText = res.title || "Facebook Video";
+                    document.getElementById('duration').innerText = `Duration: ${res.duration}`;
+                    
+                    // Set Download Links
+                    const sdBtn = document.getElementById('sdLink');
+                    const hdBtn = document.getElementById('hdLink');
+
+                    if(res.download_links.sd) {
+                        sdBtn.href = res.download_links.sd;
+                        sdBtn.classList.remove('hidden');
+                    } else {
+                        sdBtn.classList.add('hidden');
+                    }
+
+                    if(res.download_links.hd) {
+                        hdBtn.href = res.download_links.hd;
+                        hdBtn.classList.remove('hidden');
+                    } else {
+                        hdBtn.classList.add('hidden');
+                    }
+
+                    resultDiv.classList.remove('hidden');
+                } else {
+                    throw new Error("Invalid URL or API error");
+                }
+            } catch (err) {
+                errorMsg.innerText = "Error: Could not fetch video. Make sure the link is public.";
+                errorMsg.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                loading.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
